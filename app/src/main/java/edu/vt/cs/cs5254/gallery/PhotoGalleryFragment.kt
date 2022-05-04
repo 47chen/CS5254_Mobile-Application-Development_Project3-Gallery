@@ -1,17 +1,13 @@
 package edu.vt.cs.cs5254.gallery
 
-import android.content.Intent
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
 import android.widget.ImageView
-import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -28,11 +24,14 @@ class PhotoGalleryFragment : Fragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setHasOptionsMenu(true)
+        viewModel.loadPhotos()
         val responseHandler = Handler(Looper.getMainLooper())
         thumbnailDownloader =
             ThumbnailDownloader(responseHandler) { photoHolder, bitmap ->
                 val drawable = BitmapDrawable(resources, bitmap)
                 photoHolder.bindDrawable(drawable)
+                viewModel.storeThumbnail(photoHolder.galleryItem.id, drawable)
             }
         lifecycle.addObserver(thumbnailDownloader.fragmentLifecycleObserver)
     }
@@ -57,14 +56,29 @@ class PhotoGalleryFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         viewModel.galleryItemLiveData.observe(
             viewLifecycleOwner
-        ) { galleryItems ->
-            binding.photoRecyclerView.adapter = PhotoAdapter(galleryItems)
+        ) { galleryItem ->
+            binding.photoRecyclerView.adapter = PhotoAdapter(galleryItem)
+        }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        super.onCreateOptionsMenu(menu, inflater)
+        inflater.inflate(R.menu.menu_gallery, menu)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.reload_photos -> {
+                viewModel.reloadPhotos()
+                true
+            }
+            else -> return super.onOptionsItemSelected(item)
         }
     }
 
     private inner class PhotoHolder(itemImageView: ImageView) :
         RecyclerView.ViewHolder(itemImageView), View.OnClickListener {
-        private lateinit var galleryItem: GalleryItem
+        lateinit var galleryItem: GalleryItem
 
         init {
             itemView.setOnClickListener(this)
@@ -124,7 +138,9 @@ class PhotoGalleryFragment : Fragment() {
                 R.drawable.placeholder
             ) ?: ColorDrawable()
             holder.bindDrawable(placeholder)
-            thumbnailDownloader.queueThumbnail(holder, galleryItem.url)
+            if (galleryItem.drawable == null) {
+                thumbnailDownloader.queueThumbnail(holder, galleryItem.url)
+            }
         }
     }
 

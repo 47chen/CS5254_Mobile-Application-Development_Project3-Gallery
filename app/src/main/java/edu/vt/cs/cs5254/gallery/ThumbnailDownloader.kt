@@ -14,8 +14,7 @@ import java.util.concurrent.ConcurrentHashMap
 private const val TAG = "ThumbnailDownloader"
 private const val MESSAGE_DOWNLOAD = 0
 
-// Any? -> can be null vs. Any -> cannot be null
-class ThumbnailDownloader<in H : Any>(
+class ThumbnailDownloader<in H: Any>(
     private val responseHandler: Handler,
     private val onThumbnailDownloaded: (H, Bitmap) -> Unit
 ) : HandlerThread(TAG) {
@@ -58,7 +57,6 @@ class ThumbnailDownloader<in H : Any>(
             }
         }
     }
-
     override fun quit(): Boolean {
         hasQuit = true
         return super.quit()
@@ -74,6 +72,7 @@ class ThumbnailDownloader<in H : Any>(
     private fun handleRequest(holder: H) {
         val url = requestMap[holder] ?: return
         val bitmap = FlickrFetchr.fetchPhoto(url) ?: return
+
         responseHandler.post(Runnable {
             if (requestMap[holder] != url || hasQuit) {
                 return@Runnable
@@ -82,5 +81,5 @@ class ThumbnailDownloader<in H : Any>(
             onThumbnailDownloaded(holder, bitmap)
         })
     }
-}
 
+}
